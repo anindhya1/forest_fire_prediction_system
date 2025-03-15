@@ -1,0 +1,43 @@
+# Python virtual environment
+.venv/
+venv/
+ENV/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Local development settings
+.env
+.flaskenv
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# AWS Elastic Beanstalk
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
+
+# Local data
+*.csv
+*.db
+*.sqlite
+
+# Log files
+*.log
+
+# IDE settings
+.idea/
+.vscode/
+*.swp
+*.swo

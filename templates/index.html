@@ -1,0 +1,262 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forest Fire Risk Predictor</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .low {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .moderate {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .high {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .extreme {
+            background-color: #dc3545;
+            color: white;
+        }
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e7f3fe;
+            border-left: 5px solid #2196F3;
+            border-radius: 4px;
+        }
+        .history {
+            margin-top: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Forest Fire Risk Predictor</h1>
+
+        <form id="predictionForm">
+            <div class="form-group">
+                <label for="temperature">Temperature (°C):</label>
+                <input type="number" id="temperature" name="temperature" required>
+            </div>
+
+            <div class="form-group">
+                <label for="humidity">Humidity (%):</label>
+                <input type="number" id="humidity" name="humidity" required>
+            </div>
+
+            <div class="form-group">
+                <label for="windSpeed">Wind Speed (km/h):</label>
+                <input type="number" id="windSpeed" name="windSpeed" required>
+            </div>
+
+            <div class="form-group">
+                <label for="rainfall">Recent Rainfall (mm):</label>
+                <input type="number" id="rainfall" name="rainfall" required>
+            </div>
+
+            <div class="form-group">
+                <label for="daysWithoutRain">Days Without Rain:</label>
+                <input type="number" id="daysWithoutRain" name="daysWithoutRain" required>
+            </div>
+
+            <button type="submit">Calculate Risk</button>
+        </form>
+
+        <div id="result" style="display: none;" class="result"></div>
+
+        <div class="info">
+            <h3>About Forest Fire Risk Prediction</h3>
+            <p>This tool uses environmental factors to estimate the risk of forest fires:</p>
+            <ul>
+                <li><strong>Temperature:</strong> Higher temperatures increase the risk by drying out forest materials</li>
+                <li><strong>Humidity:</strong> Lower humidity makes vegetation more flammable</li>
+                <li><strong>Wind Speed:</strong> Stronger winds can spread fires more quickly</li>
+                <li><strong>Rainfall:</strong> Recent rainfall reduces risk by increasing moisture in vegetation</li>
+                <li><strong>Days Without Rain:</strong> Longer dry periods significantly increase fire risk</li>
+            </ul>
+        </div>
+
+        <div class="history">
+            <h3>Recent Predictions</h3>
+            <table id="historyTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Temperature</th>
+                        <th>Humidity</th>
+                        <th>Wind Speed</th>
+                        <th>Risk Level</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- History will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('predictionForm');
+            const result = document.getElementById('result');
+
+            // Load prediction history
+            loadHistory();
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const formData = {
+                    temperature: document.getElementById('temperature').value,
+                    humidity: document.getElementById('humidity').value,
+                    windSpeed: document.getElementById('windSpeed').value,
+                    rainfall: document.getElementById('rainfall').value,
+                    daysWithoutRain: document.getElementById('daysWithoutRain').value
+                };
+
+                // Send prediction request
+                fetch('/api/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Display result
+                    result.style.display = 'block';
+                    result.textContent = `Fire Risk Level: ${data.riskLevel}`;
+
+                    // Set appropriate class based on risk level
+                    result.className = 'result';
+                    if (data.riskLevel === 'Low') {
+                        result.classList.add('low');
+                    } else if (data.riskLevel === 'Moderate') {
+                        result.classList.add('moderate');
+                    } else if (data.riskLevel === 'High') {
+                        result.classList.add('high');
+                    } else if (data.riskLevel === 'Extreme') {
+                        result.classList.add('extreme');
+                    }
+
+                    // Reload history
+                    loadHistory();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    result.style.display = 'block';
+                    result.textContent = 'Error calculating risk. Please try again.';
+                    result.className = 'result error';
+                });
+            });
+
+            function loadHistory() {
+                fetch('/api/history')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.querySelector('#historyTable tbody');
+                    tbody.innerHTML = '';
+
+                    data.forEach(record => {
+                        const row = document.createElement('tr');
+
+                        // Format date
+                        const date = new Date(record.timestamp);
+                        const formattedDate = date.toLocaleString();
+
+                        row.innerHTML = `
+                            <td>${formattedDate}</td>
+                            <td>${record.temperature}°C</td>
+                            <td>${record.humidity}%</td>
+                            <td>${record.wind_speed} km/h</td>
+                            <td>${record.risk_level}</td>
+                        `;
+
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading history:', error);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
