@@ -101,27 +101,42 @@ model = ForestFireModel()
 
 
 # Optional: Weather API Integration
+# Weather API functionality
 def get_weather_data(lat, lon):
-    """Optional function to fetch actual weather data"""
+    """
+    Fetch real-time weather data from OpenWeatherMap API
+
+    Parameters:
+    lat (float): Latitude
+    lon (float): Longitude
+
+    Returns:
+    dict: Weather data including temperature, humidity, wind speed, and rainfall
+    """
+    api_key = os.getenv('WEATHER_API_KEY')
+    if not api_key:
+        return {"error": "Weather API key not configured"}
+
+    url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&units=metric&appid={api_key}"
+
     try:
-        api_key = os.getenv('WEATHER_API_KEY')
-        if not api_key:
-            return None
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
 
-        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
-        response = requests.get(url)
-        data = response.json()
+            # Extract relevant weather data
+            weather_data = {
+                'temperature': data['main']['temp'],
+                'humidity': data['main']['humidity'],
+                'wind_speed': data['wind']['speed'] * 3.6,  # Convert m/s to km/h
+                'rainfall': data.get('rain', {}).get('1h', 0)  # Rainfall in last hour, default 0
+            }
 
-        return {
-            'temperature': data['main']['temp'],
-            'humidity': data['main']['humidity'],
-            'wind_speed': data['wind']['speed'],
-            'rainfall': data.get('rain', {}).get('1h', 0)
-        }
+            return weather_data
+        else:
+            return {"error": f"API returned status code {response.status_code}"}
     except Exception as e:
-        print(f"Error fetching weather data: {e}")
-        return None
-
+        return {"error": str(e)}
 
 @application.route('/')
 def home():
@@ -169,6 +184,19 @@ def history():
     df = pd.read_csv(MOCK_DB_FILE)
     records = df.tail(10).to_dict('records')
     return jsonify(records)
+
+
+@application.route('/api/weather', methods=['POST'])
+def weather():
+    data = request.json
+    lat = data.get('latitude')
+    lon = data.get('longitude')
+
+    if not lat or not lon:
+        return jsonify({"error": "Latitude and longitude are required"}), 400
+
+    weather_data = get_weather_data(float(lat), float(lon))
+    return jsonify(weather_data)
 
 
 if __name__ == '__main__':

@@ -1,4 +1,3 @@
-<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -103,36 +102,153 @@
             background-color: #f8d7da;
             color: #721c24;
         }
+        /* New styles for weather section */
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: auto;
+        }
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+        .location-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .alert {
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .alert-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .alert-warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .mt-2 {
+            margin-top: 10px;
+        }
+        .mt-3 {
+            margin-top: 15px;
+        }
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .location-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        @media (max-width: 600px) {
+            .location-inputs {
+                grid-template-columns: 1fr;
+            }
+        }
+        .city-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 15px 0;
+        }
+        .city-btn {
+            background-color: #6c757d;
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            width: auto;
+        }
+        .city-btn:hover {
+            background-color: #5a6268;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Forest Fire Risk Predictor</h1>
 
+        <!-- New Weather Data Section -->
+        <div class="location-section">
+            <h3>Get Current Weather Data</h3>
+            <p>Use your current location to automatically fetch weather data</p>
+
+            <button type="button" id="getLocationBtn" class="btn-secondary">
+                Use My Location
+            </button>
+
+            <div id="locationStatus" class="mt-2" style="display: none;"></div>
+
+            <!-- City Selection Buttons -->
+            <div class="city-buttons">
+                <button type="button" class="city-btn" data-lat="40.7128" data-lon="-74.0060">New York</button>
+                <button type="button" class="city-btn" data-lat="34.0522" data-lon="-118.2437">Los Angeles</button>
+                <button type="button" class="city-btn" data-lat="51.5074" data-lon="-0.1278">London</button>
+                <button type="button" class="city-btn" data-lat="-33.8688" data-lon="151.2093">Sydney</button>
+                <button type="button" class="city-btn" data-lat="37.7749" data-lon="-122.4194">San Francisco</button>
+            </div>
+
+            <div class="location-inputs mt-3">
+                <div class="form-group">
+                    <label for="latitude">Latitude:</label>
+                    <input type="text" id="latitude" name="latitude" class="form-control" placeholder="e.g., 37.7749">
+                </div>
+                <div class="form-group">
+                    <label for="longitude">Longitude:</label>
+                    <input type="text" id="longitude" name="longitude" class="form-control" placeholder="e.g., -122.4194">
+                </div>
+                <button type="button" id="fetchWeatherBtn" class="btn-secondary">
+                    Fetch Weather Data
+                </button>
+            </div>
+        </div>
+
         <form id="predictionForm">
             <div class="form-group">
                 <label for="temperature">Temperature (°C):</label>
-                <input type="number" id="temperature" name="temperature" required>
+                <input type="number" id="temperature" name="temperature" step="0.1" required>
             </div>
 
             <div class="form-group">
                 <label for="humidity">Humidity (%):</label>
-                <input type="number" id="humidity" name="humidity" required>
+                <input type="number" id="humidity" name="humidity" step="0.1" required>
             </div>
 
             <div class="form-group">
                 <label for="windSpeed">Wind Speed (km/h):</label>
-                <input type="number" id="windSpeed" name="windSpeed" required>
+                <input type="number" id="windSpeed" name="windSpeed" step="0.1" required>
             </div>
 
             <div class="form-group">
                 <label for="rainfall">Recent Rainfall (mm):</label>
-                <input type="number" id="rainfall" name="rainfall" required>
+                <input type="number" id="rainfall" name="rainfall" step="0.1" required>
             </div>
 
             <div class="form-group">
                 <label for="daysWithoutRain">Days Without Rain:</label>
-                <input type="number" id="daysWithoutRain" name="daysWithoutRain" required>
+                <input type="number" id="daysWithoutRain" name="daysWithoutRain" step="1" required>
             </div>
 
             <button type="submit">Calculate Risk</button>
@@ -175,9 +291,82 @@
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('predictionForm');
             const result = document.getElementById('result');
+            const getLocationBtn = document.getElementById('getLocationBtn');
+            const fetchWeatherBtn = document.getElementById('fetchWeatherBtn');
+            const locationStatus = document.getElementById('locationStatus');
 
             // Load prediction history
             loadHistory();
+
+            // Handle "Use My Location" button
+            getLocationBtn.addEventListener('click', function() {
+                locationStatus.style.display = 'block';
+                locationStatus.textContent = 'Requesting location...';
+                locationStatus.className = 'mt-2 alert alert-info';
+
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        // Success callback
+                        function(position) {
+                            document.getElementById('latitude').value = position.coords.latitude.toFixed(6);
+                            document.getElementById('longitude').value = position.coords.longitude.toFixed(6);
+                            locationStatus.textContent = 'Location acquired successfully.';
+                            locationStatus.className = 'mt-2 alert alert-success';
+                            // Automatically fetch weather after getting location
+                            fetchWeatherData();
+                        },
+                        // Error callback - Safari-specific guidance added
+                        function(error) {
+                            let errorMessage;
+                            switch(error.code) {
+                                case error.PERMISSION_DENIED:
+                                    errorMessage = "Location access denied. For Safari users: Check Safari → Preferences → Privacy & Security → Location Services, or try refreshing the page.";
+                                    break;
+                                case error.POSITION_UNAVAILABLE:
+                                    errorMessage = "Location information unavailable.";
+                                    break;
+                                case error.TIMEOUT:
+                                    errorMessage = "Location request timed out.";
+                                    break;
+                                default:
+                                    errorMessage = "An unknown error occurred.";
+                            }
+                            locationStatus.textContent = errorMessage;
+                            locationStatus.className = 'mt-2 alert alert-warning';
+                        },
+                        // Options object for better Safari compatibility
+                        {
+                            enableHighAccuracy: true,
+                            timeout: 10000,
+                            maximumAge: 0
+                        }
+                    );
+                } else {
+                    locationStatus.textContent = 'Geolocation is not supported by this browser.';
+                    locationStatus.className = 'mt-2 alert alert-danger';
+                }
+            });
+
+            // Handle city button clicks
+            document.querySelectorAll('.city-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const lat = this.getAttribute('data-lat');
+                    const lon = this.getAttribute('data-lon');
+
+                    document.getElementById('latitude').value = lat;
+                    document.getElementById('longitude').value = lon;
+
+                    // Show loading status
+                    locationStatus.style.display = 'block';
+                    locationStatus.textContent = 'Fetching weather data...';
+                    locationStatus.className = 'mt-2 alert alert-info';
+
+                    fetchWeatherData();
+                });
+            });
+
+            // Handle "Fetch Weather" button
+            fetchWeatherBtn.addEventListener('click', fetchWeatherData);
 
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
@@ -226,6 +415,54 @@
                     result.className = 'result error';
                 });
             });
+
+            function fetchWeatherData() {
+                const latitude = document.getElementById('latitude').value;
+                const longitude = document.getElementById('longitude').value;
+
+                if (!latitude || !longitude) {
+                    locationStatus.style.display = 'block';
+                    locationStatus.textContent = 'Please provide latitude and longitude.';
+                    locationStatus.className = 'mt-2 alert alert-warning';
+                    return;
+                }
+
+                locationStatus.style.display = 'block';
+                locationStatus.textContent = 'Fetching weather data...';
+                locationStatus.className = 'mt-2 alert alert-info';
+
+                // Call the API to get weather data
+                fetch('/api/weather', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        latitude: latitude,
+                        longitude: longitude
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        locationStatus.textContent = 'Error: ' + data.error;
+                        locationStatus.className = 'mt-2 alert alert-danger';
+                    } else {
+                        // Update form with weather data
+                        document.getElementById('temperature').value = data.temperature.toFixed(1);
+                        document.getElementById('humidity').value = data.humidity;
+                        document.getElementById('windSpeed').value = data.wind_speed.toFixed(1);
+                        document.getElementById('rainfall').value = data.rainfall;
+
+                        locationStatus.textContent = 'Weather data loaded successfully!';
+                        locationStatus.className = 'mt-2 alert alert-success';
+                    }
+                })
+                .catch(error => {
+                    locationStatus.textContent = 'Error connecting to weather service: ' + error.message;
+                    locationStatus.className = 'mt-2 alert alert-danger';
+                });
+            }
 
             function loadHistory() {
                 fetch('/api/history')
