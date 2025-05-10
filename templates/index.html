@@ -115,7 +115,7 @@
         .btn-secondary:hover {
             background-color: #5a6268;
         }
-        .location-section {
+        .location-section, .satellite-section {
             margin: 20px 0;
             padding: 15px;
             border: 1px solid #ddd;
@@ -184,13 +184,124 @@
         .city-btn:hover {
             background-color: #5a6268;
         }
+        /* Satellite image styles */
+        .satellite-image-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .satellite-image {
+            max-width: 100%;
+            height: auto;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            margin-top: 10px;
+        }
+
+        .satellite-metadata {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #555;
+        }
+        .satellite-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        /* New Feature Importance Styles */
+        .feature-importance {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .feature-importance h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .feature-importance ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .feature-importance li {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .feature-bar-wrapper {
+            width: 70%;
+            background-color: #eee;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 0 10px;
+            flex-grow: 1;
+            height: 12px;
+            position: relative;
+        }
+
+        .feature-bar {
+            height: 100%;
+            transition: width 0.7s ease-in-out;
+            border-radius: 5px;
+        }
+
+        .feature-label {
+            width: 25%;
+            font-weight: 500;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .feature-percent {
+            width: 10%;
+            text-align: right;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .probability-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .probability-container label {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+        .probability-bar {
+            height: 20px;
+            border-radius: 10px;
+            margin-right: 10px;
+            flex-grow: 1;
+            display: inline-block;
+            background-color: #ccc;
+            min-width: 5px;
+            transition: width 0.6s ease-in-out, background-color 0.6s ease;
+        }
+
+        .risk-level-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            background-color: #d4edda;
+            color: #155724;
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Forest Fire Risk Predictor</h1>
 
-        <!-- New Weather Data Section -->
+        <!-- Location Section -->
         <div class="location-section">
             <h3>Get Current Weather Data</h3>
             <p>Use your current location to automatically fetch weather data</p>
@@ -225,6 +336,31 @@
             </div>
         </div>
 
+        <!-- Satellite Section -->
+        <div class="satellite-section">
+            <h3>Satellite Imagery</h3>
+            <p>View satellite images of your selected location to assess vegetation and terrain</p>
+
+            <div id="satelliteStatus" class="mt-2" style="display: none;"></div>
+
+            <div id="satelliteLoading" class="mt-2" style="display: none; text-align: center; font-style: italic;">
+                Loading satellite image...
+            </div>
+
+            <div id="satelliteImage" class="satellite-image-container" style="display: none;">
+                <img id="satImg" class="satellite-image" src="" alt="Satellite image of location">
+                <div class="satellite-metadata">
+                    <p id="satDate"></p>
+                    <p id="satCloud"></p>
+                </div>
+            </div>
+
+            <button type="button" id="fetchSatelliteBtn" class="btn-secondary mt-2">
+                Fetch Satellite Image
+            </button>
+        </div>
+
+        <!-- Prediction Form -->
         <form id="predictionForm">
             <div class="form-group">
                 <label for="temperature">Temperature (°C):</label>
@@ -251,11 +387,87 @@
                 <input type="number" id="daysWithoutRain" name="daysWithoutRain" step="1" required>
             </div>
 
+            <div class="advanced-features">
+              <h3>Advanced Inputs (Optional)</h3>
+              <div class="form-group">
+                <label for="vegetationIndex">Vegetation Index (NDVI):</label>
+                <input type="number" id="vegetationIndex" name="vegetationIndex" step="0.01" min="0" max="1" placeholder="e.g., 0.7">
+              </div>
+              <div class="form-group">
+                <label for="fireDensity">Historical Fire Density (fires per sq.km):</label>
+                <input type="number" id="fireDensity" name="fireDensity" step="0.1" min="0" placeholder="e.g., 2.5">
+              </div>
+            </div>
+
+            <div class="form-group">
+                <label for="pressure">Pressure (hPa):</label>
+                <input type="number" id="pressure" name="pressure" step="0.1" required>
+            </div>
+
+            <div class="form-group">
+                <label for="vegetation_type_encoded">Vegetation Type (encoded):</label>
+                <input type="number" id="vegetation_type_encoded" name="vegetation_type_encoded" min="0" step="1" required>
+            </div>
+
+            <div class="form-group">
+                <label for="elevation">Elevation (meters):</label>
+                <input type="number" id="elevation" name="elevation" step="0.1" required>
+            </div>
+
+            <div class="form-group">
+                <label for="firms_confidence">FIRMS Confidence (%):</label>
+                <input type="number" id="firms_confidence" name="firms_confidence" min="0" max="100" step="1" required>
+            </div>
+
+            <div class="form-group">
+                <label for="firms_brightness">FIRMS Brightness:</label>
+                <input type="number" id="firms_brightness" name="firms_brightness" step="0.1" required>
+            </div>
+
+
             <button type="submit">Calculate Risk</button>
         </form>
 
-        <div id="result" style="display: none;" class="result"></div>
+        <!-- Prediction Result -->
+        <div id="riskLevelBox" class="risk-level-box" style="display: none;"></div>
 
+        <!-- Prediction Details Section -->
+        <div id="predictionDetails" style="display: none;">
+            <div class="feature-importance">
+                <h3>Risk Probabilities</h3>
+                <div id="riskProbabilities">
+                    <div class="probability-container">
+                        <label>Low Risk</label>
+                        <div class="probability-bar" id="lowRiskBar"></div>
+                        <span id="lowRiskPercentage"></span>
+                    </div>
+                    <div class="probability-container">
+                        <label>Moderate Risk</label>
+                        <div class="probability-bar" id="moderateRiskBar"></div>
+                        <span id="moderateRiskPercentage"></span>
+                    </div>
+                    <div class="probability-container">
+                        <label>High Risk</label>
+                        <div class="probability-bar" id="highRiskBar"></div>
+                        <span id="highRiskPercentage"></span>
+                    </div>
+                    <div class="probability-container">
+                        <label>Extreme Risk</label>
+                        <div class="probability-bar" id="extremeRiskBar"></div>
+                        <span id="extremeRiskPercentage"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feature-importance">
+                <h3>Feature Importance</h3>
+                <ul id="featureImportanceList">
+                    <!-- Will be populated dynamically -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- Information Section -->
         <div class="info">
             <h3>About Forest Fire Risk Prediction</h3>
             <p>This tool uses environmental factors to estimate the risk of forest fires:</p>
@@ -268,6 +480,7 @@
             </ul>
         </div>
 
+        <!-- Prediction History -->
         <div class="history">
             <h3>Recent Predictions</h3>
             <table id="historyTable">
@@ -288,212 +501,400 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('predictionForm');
-            const result = document.getElementById('result');
-            const getLocationBtn = document.getElementById('getLocationBtn');
-            const fetchWeatherBtn = document.getElementById('fetchWeatherBtn');
-            const locationStatus = document.getElementById('locationStatus');
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('predictionForm');
+        const result = document.getElementById('result');
+        const getLocationBtn = document.getElementById('getLocationBtn');
+        const fetchWeatherBtn = document.getElementById('fetchWeatherBtn');
+        const fetchSatelliteBtn = document.getElementById('fetchSatelliteBtn');
+        const locationStatus = document.getElementById('locationStatus');
+        const satelliteStatus = document.getElementById('satelliteStatus');
 
-            // Load prediction history
-            loadHistory();
+        // Load prediction history
+        function loadHistory() {
+            fetch('/api/history')
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.querySelector('#historyTable tbody');
+                tbody.innerHTML = '';
 
-            // Handle "Use My Location" button
-            getLocationBtn.addEventListener('click', function() {
-                locationStatus.style.display = 'block';
-                locationStatus.textContent = 'Requesting location...';
-                locationStatus.className = 'mt-2 alert alert-info';
+                data.forEach(record => {
+                    const row = document.createElement('tr');
+                    const date = record.timestamp ? new Date(record.timestamp).toLocaleString() : 'N/A';
 
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        // Success callback
-                        function(position) {
-                            document.getElementById('latitude').value = position.coords.latitude.toFixed(6);
-                            document.getElementById('longitude').value = position.coords.longitude.toFixed(6);
-                            locationStatus.textContent = 'Location acquired successfully.';
-                            locationStatus.className = 'mt-2 alert alert-success';
-                            // Automatically fetch weather after getting location
-                            fetchWeatherData();
-                        },
-                        // Error callback - Safari-specific guidance added
-                        function(error) {
-                            let errorMessage;
-                            switch(error.code) {
-                                case error.PERMISSION_DENIED:
-                                    errorMessage = "Location access denied. For Safari users: Check Safari → Preferences → Privacy & Security → Location Services, or try refreshing the page.";
-                                    break;
-                                case error.POSITION_UNAVAILABLE:
-                                    errorMessage = "Location information unavailable.";
-                                    break;
-                                case error.TIMEOUT:
-                                    errorMessage = "Location request timed out.";
-                                    break;
-                                default:
-                                    errorMessage = "An unknown error occurred.";
-                            }
-                            locationStatus.textContent = errorMessage;
-                            locationStatus.className = 'mt-2 alert alert-warning';
-                        },
-                        // Options object for better Safari compatibility
-                        {
-                            enableHighAccuracy: true,
-                            timeout: 10000,
-                            maximumAge: 0
-                        }
-                    );
-                } else {
-                    locationStatus.textContent = 'Geolocation is not supported by this browser.';
-                    locationStatus.className = 'mt-2 alert alert-danger';
-                }
-            });
+                    row.innerHTML = `
+                        <td>${date}</td>
+                        <td>${record.temperature ?? 'N/A'}°C</td>
+                        <td>${record.humidity ?? 'N/A'}%</td>
+                        <td>${record.wind_speed ?? 'N/A'} km/h</td>
+                        <td>${record.risk_level ?? 'N/A'}</td>
+                    `;
 
-            // Handle city button clicks
-            document.querySelectorAll('.city-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    const lat = this.getAttribute('data-lat');
-                    const lon = this.getAttribute('data-lon');
-
-                    document.getElementById('latitude').value = lat;
-                    document.getElementById('longitude').value = lon;
-
-                    // Show loading status
-                    locationStatus.style.display = 'block';
-                    locationStatus.textContent = 'Fetching weather data...';
-                    locationStatus.className = 'mt-2 alert alert-info';
-
-                    fetchWeatherData();
+                    tbody.appendChild(row);
                 });
+            })
+            .catch(error => {
+                console.error('Error loading history:', error);
             });
+        }
 
-            // Handle "Fetch Weather" button
-            fetchWeatherBtn.addEventListener('click', fetchWeatherData);
+        // Handle "Use My Location" button
+        getLocationBtn.addEventListener('click', function() {
+            locationStatus.style.display = 'block';
+            locationStatus.textContent = 'Requesting location...';
+            locationStatus.className = 'mt-2 alert alert-info';
 
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-
-                const formData = {
-                    temperature: document.getElementById('temperature').value,
-                    humidity: document.getElementById('humidity').value,
-                    windSpeed: document.getElementById('windSpeed').value,
-                    rainfall: document.getElementById('rainfall').value,
-                    daysWithoutRain: document.getElementById('daysWithoutRain').value
-                };
-
-                // Send prediction request
-                fetch('/api/predict', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    // Success callback
+                    function(position) {
+                        document.getElementById('latitude').value = position.coords.latitude.toFixed(6);
+                        document.getElementById('longitude').value = position.coords.longitude.toFixed(6);
+                        locationStatus.textContent = 'Location acquired successfully.';
+                        locationStatus.className = 'mt-2 alert alert-success';
+                        // Automatically fetch weather after getting location
+                        fetchWeatherData();
                     },
-                    body: JSON.stringify(formData)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    // Display result
-                    result.style.display = 'block';
-                    result.textContent = `Fire Risk Level: ${data.riskLevel}`;
-
-                    // Set appropriate class based on risk level
-                    result.className = 'result';
-                    if (data.riskLevel === 'Low') {
-                        result.classList.add('low');
-                    } else if (data.riskLevel === 'Moderate') {
-                        result.classList.add('moderate');
-                    } else if (data.riskLevel === 'High') {
-                        result.classList.add('high');
-                    } else if (data.riskLevel === 'Extreme') {
-                        result.classList.add('extreme');
+                    // Error callback
+                    function(error) {
+                        let errorMessage;
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMessage = "Location access denied.";
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMessage = "Location information unavailable.";
+                                break;
+                            case error.TIMEOUT:
+                                errorMessage = "Location request timed out.";
+                                break;
+                            default:
+                                errorMessage = "An unknown error occurred.";
+                        }
+                        locationStatus.textContent = errorMessage;
+                        locationStatus.className = 'mt-2 alert alert-danger';
                     }
+                );
+            } else {
+                locationStatus.textContent = 'Geolocation is not supported by this browser.';
+                locationStatus.className = 'mt-2 alert alert-danger';
+            }
+        });
 
-                    // Reload history
-                    loadHistory();
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    result.style.display = 'block';
-                    result.textContent = 'Error calculating risk. Please try again.';
-                    result.className = 'result error';
-                });
-            });
+        // Handle city button clicks
+        document.querySelectorAll('.city-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const lat = this.getAttribute('data-lat');
+                const lon = this.getAttribute('data-lon');
 
-            function fetchWeatherData() {
-                const latitude = document.getElementById('latitude').value;
-                const longitude = document.getElementById('longitude').value;
+                document.getElementById('latitude').value = lat;
+                document.getElementById('longitude').value = lon;
 
-                if (!latitude || !longitude) {
-                    locationStatus.style.display = 'block';
-                    locationStatus.textContent = 'Please provide latitude and longitude.';
-                    locationStatus.className = 'mt-2 alert alert-warning';
-                    return;
-                }
-
+                // Show loading status
                 locationStatus.style.display = 'block';
                 locationStatus.textContent = 'Fetching weather data...';
                 locationStatus.className = 'mt-2 alert alert-info';
 
-                // Call the API to get weather data
-                fetch('/api/weather', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        latitude: latitude,
-                        longitude: longitude
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        locationStatus.textContent = 'Error: ' + data.error;
-                        locationStatus.className = 'mt-2 alert alert-danger';
-                    } else {
-                        // Update form with weather data
-                        document.getElementById('temperature').value = data.temperature.toFixed(1);
-                        document.getElementById('humidity').value = data.humidity;
-                        document.getElementById('windSpeed').value = data.wind_speed.toFixed(1);
-                        document.getElementById('rainfall').value = data.rainfall;
-
-                        locationStatus.textContent = 'Weather data loaded successfully!';
-                        locationStatus.className = 'mt-2 alert alert-success';
-                    }
-                })
-                .catch(error => {
-                    locationStatus.textContent = 'Error connecting to weather service: ' + error.message;
-                    locationStatus.className = 'mt-2 alert alert-danger';
-                });
-            }
-
-            function loadHistory() {
-                fetch('/api/history')
-                .then(response => response.json())
-                .then(data => {
-                    const tbody = document.querySelector('#historyTable tbody');
-                    tbody.innerHTML = '';
-
-                    data.forEach(record => {
-                        const row = document.createElement('tr');
-
-                        // Format date
-                        const date = new Date(record.timestamp);
-                        const formattedDate = date.toLocaleString();
-
-                        row.innerHTML = `
-                            <td>${formattedDate}</td>
-                            <td>${record.temperature}°C</td>
-                            <td>${record.humidity}%</td>
-                            <td>${record.wind_speed} km/h</td>
-                            <td>${record.risk_level}</td>
-                        `;
-
-                        tbody.appendChild(row);
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading history:', error);
-                });
-            }
+                fetchWeatherData();
+            });
         });
+
+        // Fetch Weather Data Function
+        function fetchWeatherData() {
+            const latitude = document.getElementById('latitude').value;
+            const longitude = document.getElementById('longitude').value;
+
+            if (!latitude || !longitude) {
+                locationStatus.style.display = 'block';
+                locationStatus.textContent = 'Please provide latitude and longitude.';
+                locationStatus.className = 'mt-2 alert alert-warning';
+                return;
+            }
+
+            locationStatus.style.display = 'block';
+            locationStatus.textContent = 'Fetching weather data...';
+            locationStatus.className = 'mt-2 alert alert-info';
+
+            // Call the API to get weather data
+            fetch('/api/weather', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    latitude: latitude,
+                    longitude: longitude
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    locationStatus.textContent = 'Error: ' + data.error;
+                    locationStatus.className = 'mt-2 alert alert-danger';
+                } else {
+                    // Update form with weather data
+                    document.getElementById('temperature').value = data.temperature.toFixed(1);
+                    document.getElementById('humidity').value = data.humidity;
+                    document.getElementById('windSpeed').value = data.wind_speed.toFixed(1);
+                    document.getElementById('rainfall').value = data.rainfall;
+
+                    // ✅ Advanced inputs auto-fill
+                    if ('vegetationIndex' in data) {
+                        document.getElementById('vegetationIndex').value = data.vegetationIndex;
+                    }
+                    if ('fireDensity' in data) {
+                        document.getElementById('fireDensity').value = data.fireDensity;
+                    }
+                    if ('pressure' in data) {
+                        document.getElementById('pressure').value = data.pressure;
+                    }
+                    if ('elevation' in data) {
+                        document.getElementById('elevation').value = data.elevation;
+                    }
+                    if ('firms_confidence' in data) {
+                        document.getElementById('firms_confidence').value = data.firms_confidence;
+                    }
+                    if ('firms_brightness' in data) {
+                        document.getElementById('firms_brightness').value = data.firms_brightness;
+                    }
+                    if ('vegetation_type_encoded' in data) {
+                        document.getElementById('vegetation_type_encoded').value = data.vegetation_type_encoded;
+                    }
+
+                    locationStatus.textContent = 'Weather data loaded successfully!';
+                    locationStatus.className = 'mt-2 alert alert-success';
+                }
+            })
+            .catch(error => {
+                locationStatus.textContent = 'Error connecting to weather service: ' + error.message;
+                locationStatus.className = 'mt-2 alert alert-danger';
+            });
+        }
+
+        // Handle "Fetch Weather" button
+        fetchWeatherBtn.addEventListener('click', fetchWeatherData);
+
+        // Handle "Fetch Satellite Image" button
+        fetchSatelliteBtn.addEventListener('click', function() {
+            const latitude = document.getElementById('latitude').value;
+            const longitude = document.getElementById('longitude').value;
+
+            if (!latitude || !longitude) {
+                satelliteStatus.style.display = 'block';
+                satelliteStatus.textContent = 'Please provide latitude and longitude first.';
+                satelliteStatus.className = 'mt-2 alert alert-warning';
+                return;
+            }
+
+            satelliteStatus.style.display = 'block';
+            document.getElementById('satelliteLoading').style.display = 'none';
+            satelliteStatus.textContent = 'Fetching satellite imagery...';
+            document.getElementById('satelliteLoading').style.display = 'block';
+            document.getElementById('satelliteImage').style.display = 'none';
+            satelliteStatus.className = 'mt-2 alert alert-info';
+
+
+            fetch('/api/satellite', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    latitude: latitude,
+                    longitude: longitude
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('satImg').src = data.image_url;
+                    document.getElementById('satDate').textContent = `Image Date: ${data.date}`;
+                    if (data.cloud_score !== undefined) {
+                        document.getElementById('satCloud').textContent = `Cloud Coverage: ${(data.cloud_score * 100).toFixed(1)}%`;
+                    } else {
+                        document.getElementById('satCloud').textContent = '';
+                    }
+                    document.getElementById('satelliteImage').style.display = 'block';
+                    satelliteStatus.textContent = 'Satellite imagery loaded successfully!';
+                    satelliteStatus.className = 'mt-2 alert alert-success';
+                } else {
+                    satelliteStatus.textContent = 'Error: ' + (data.message || 'Failed to load satellite image');
+                    satelliteStatus.className = 'mt-2 alert alert-danger';
+                }
+            })
+            .catch(error => {
+                satelliteStatus.textContent = 'Error connecting to satellite service: ' + error.message;
+                satelliteStatus.className = 'mt-2 alert alert-danger';
+                document.getElementById('satelliteLoading').style.display = 'none';
+            });
+        });
+
+        // Handle prediction form submission
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = {
+                temperature: parseFloat(document.getElementById('temperature').value),
+                humidity: parseFloat(document.getElementById('humidity').value),
+                windSpeed: parseFloat(document.getElementById('windSpeed').value),
+                rainfall: parseFloat(document.getElementById('rainfall').value),
+                pressure: parseFloat(document.getElementById('pressure').value),
+                vegetation_type_encoded: parseInt(document.getElementById('vegetation_type_encoded').value),
+                elevation: parseFloat(document.getElementById('elevation').value),
+                firms_confidence: parseFloat(document.getElementById('firms_confidence').value),
+                firms_brightness: parseFloat(document.getElementById('firms_brightness').value)
+            };
+
+
+
+            // Send prediction request
+            fetch('/api/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Display risk level
+                const riskBox = document.getElementById('riskLevelBox');
+                riskBox.style.display = 'block';
+                riskBox.textContent = `🔥 Fire Risk Level: ${data.riskLevel}`;
+
+                // Optional: Colorize the box depending on risk
+                if (data.riskLevel === 'Low') {
+                    riskBox.style.backgroundColor = '#d4edda';
+                    riskBox.style.color = '#155724';
+                } else if (data.riskLevel === 'Moderate') {
+                    riskBox.style.backgroundColor = '#fff3cd';
+                    riskBox.style.color = '#856404';
+                } else if (data.riskLevel === 'High') {
+                    riskBox.style.backgroundColor = '#f8d7da';
+                    riskBox.style.color = '#721c24';
+                } else if (data.riskLevel === 'Extreme') {
+                    riskBox.style.backgroundColor = '#dc3545';
+                    riskBox.style.color = '#ffffff';
+                }
+
+                // Update prediction details
+                const predictionDetails = document.getElementById('predictionDetails');
+                predictionDetails.style.display = 'block';
+
+                // Update risk probabilities
+                updateRiskProbabilityBars(data.riskProbabilities);
+
+                // Reload history
+                loadHistory();
+            })
+
+            .catch(error => {
+                console.error('Error:', error);
+                result.style.display = 'block';
+                result.textContent = 'Error calculating risk. Please try again.';
+                result.className = 'result error';
+            });
+        });
+
+        // Update risk probability bars
+       function updateRiskProbabilityBars(probabilities) {
+            const riskLevels = ['Low', 'Moderate', 'High', 'Extreme'];
+
+            riskLevels.forEach(level => {
+                const probability = probabilities[level] || 0;
+                const percentage = (probability * 100).toFixed(2);
+                const bar = document.getElementById(`${level.toLowerCase()}RiskBar`);
+                const percentageSpan = document.getElementById(`${level.toLowerCase()}RiskPercentage`);
+
+
+                if (bar && percentageSpan) {
+                    if (probability > 0.01) {  // Only show if significant
+                        bar.style.width = `${percentage}%`;
+                        bar.style.backgroundColor = getRiskColor(level);
+                        percentageSpan.textContent = `${percentage}%`;
+                        bar.parentElement.style.display = 'flex'; // Show this risk
+                    } else {
+                        bar.parentElement.style.display = 'none'; // Hide insignificant risks
+                    }
+                }
+            });
+        }
+
+
+
+        // Get color for risk level
+       function getRiskColor(riskLevel) {
+            const colorMap = {
+                'Low': '#4CAF50',       // Green
+                'Moderate': '#FFC107',  // Yellow
+                'High': '#FF5722',      // Deep orange
+                'Extreme': '#F44336'    // Red
+            };
+            return colorMap[riskLevel] || '#9E9E9E';  // Gray fallback
+       }
+
+       function getGradientColor(value) {
+            if (value >= 0.75) return '#d73027';      // Red
+            if (value >= 0.5) return '#fc8d59';       // Orange
+            if (value >= 0.25) return '#fee08b';      // Yellow
+            return '#d9ef8b';                         // Light green
+       }
+
+
+        // Update feature importance
+        function updateFeatureImportance(featureImportance) {
+            const list = document.getElementById('featureImportanceList');
+            list.innerHTML = ''; // Clear previous list
+
+            const sorted = Object.entries(featureImportance).sort((a, b) => b[1] - a[1]);
+
+            sorted.forEach(([feature, value]) => {
+                const li = document.createElement('li');
+
+                const label = document.createElement('span');
+                label.className = 'feature-label';
+                label.textContent = feature;
+
+                const barWrapper = document.createElement('div');
+                barWrapper.className = 'feature-bar-wrapper';
+
+                const bar = document.createElement('div');
+                bar.className = 'feature-bar';
+                bar.style.width = `${(value * 100).toFixed(2)}%`;
+                bar.style.backgroundColor = getGradientColor(value);
+
+                barWrapper.appendChild(bar);
+
+                const percentage = document.createElement('span');
+                percentage.className = 'feature-percent';
+                percentage.textContent = `${(value * 100).toFixed(2)}%`;
+
+                li.appendChild(label);
+                li.appendChild(barWrapper);
+                li.appendChild(percentage);
+
+                list.appendChild(li);
+            });
+        }
+
+
+        // Initial history load
+        loadHistory();
+
+        // Fetch and display feature importance from backend
+        fetch('/api/feature-importance')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateFeatureImportance(data.feature_importance);
+                } else {
+                    console.error("Error fetching feature importance:", data.message);
+                }
+            })
+            .catch(error => {
+                console.error("Error loading feature importance:", error);
+            });
+    });
     </script>
 </body>
 </html>
