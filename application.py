@@ -100,7 +100,6 @@ class ForestFireModel:
 model = ForestFireModel()
 
 
-# Optional: Weather API Integration
 # Weather API functionality
 def get_weather_data(lat, lon):
     """
